@@ -43,8 +43,22 @@ with st.sidebar:
     st.header("Controls")
     current_year = st.number_input("Year", min_value=2000, max_value=2100, value=datetime.now().year)
     prod_sidebar = st.selectbox("Product (quick select)", PRODUCTS)
+
+    # garante que a chave exista
+    if "refresh_count" not in st.session_state:
+        st.session_state["refresh_count"] = 0
+
     if st.button("Refresh / Rerun"):
-        st.experimental_rerun()
+        st.session_state["refresh_count"] += 1
+        # tenta rerun — captura erro para evitar crash no Cloud
+        try:
+            st.experimental_rerun()
+        except Exception as e:
+            # não deixa o app quebrar — mostra aviso amigável
+            st.warning("Não foi possível forçar um rerun automaticamente. Atualize a página manualmente.")
+            # para debug local você pode descomentar a linha abaixo (não deixe em produção)
+            # st.write(f"Detalhe técnico: {e}")
+
 
 tabs = st.tabs(["Overview", "Insert Trade", "Insert MTM", "Trade Log", "Graphs"])
 
