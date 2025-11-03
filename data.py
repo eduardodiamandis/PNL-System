@@ -3,14 +3,53 @@ import pandas as pd
 
 # Connect and Close
 def dbConn():
+    """
+    Retorna uma conexão psycopg2.
+    - Primeiro tenta ler st.secrets["postgres"] (Streamlit Cloud ou .streamlit/secrets.toml local).
+    - Se não existir, usa variáveis de ambiente (DB_HOST, DB_PORT, DB_NAME, DB_USER, DB_PASS).
+    - Se faltar parâmetro, lança ConnectionError com mensagem clara.
+    """
     try:
-        return psycopg2.connect(
-            host='localhost', database='PNL',
-            user='ZenNohDev', password='Zgbr@2025'
+        # tentamos st.secrets (disponível no Streamlit)
+        try:
+            import streamlit as st
+            pg = st.secrets.get("postgres", None)
+            if pg:
+                host = pg.get("host")
+                database = pg.get("database")
+                user = pg.get("user")
+                password = pg.get("password")
+                port = pg.get("port", 5432)
+            else:
+                raise RuntimeError("st.secrets['postgres'] não configurado")
+        except Exception:
+            # fallback para variáveis de ambiente
+            host = os.getenv("DB_HOST", "localhost")
+            database = os.getenv("DB_NAME", "PNL")
+            user = os.getenv("DB_USER", "ZenNohDev")
+            password = os.getenv("DB_PASS", None)
+            port = int(os.getenv("DB_PORT", 5432))
+
+        # validação mínima
+        if not all([host, database, user, password]):
+            raise ConnectionError(
+                "Parâmetros de conexão incompletos: host/database/user/password. "
+                "Verifique .streamlit/secrets.toml (local) ou Secrets no Streamlit Cloud."
+            )
+
+        conn = psycopg2.connect(
+            host=host,
+            database=database,
+            user=user,
+            password=password,
+            port=port,
+            connect_timeout=10
         )
+        return conn
+
     except Exception as e:
-        print(f'Erro conexão: {e}')
-        return None
+        # Lança exceção clara para o chamador (não retornar None)
+        raise ConnectionError(f"Erro conexão ao banco de dados: {e}")
     
 def dbClose(conn):
     if conn:
