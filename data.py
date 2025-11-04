@@ -2,33 +2,32 @@ import psycopg2
 import pandas as pd
 
 # Connect and Close
+
 def dbConn():
-    """
-    Retorna uma conexão psycopg2.
-    - Primeiro tenta ler st.secrets["postgres"] (Streamlit Cloud ou .streamlit/secrets.toml local).
-    - Se não existir, usa variáveis de ambiente (DB_HOST, DB_PORT, DB_NAME, DB_USER, DB_PASS).
-    - Se faltar parâmetro, lança ConnectionError com mensagem clara.
-    """
     try:
-        # tentamos st.secrets (disponível no Streamlit)
+        # Tenta usar as credenciais do Streamlit Secrets (produção)
+        conn = psycopg2.connect(
+            host=st.secrets["postgres"]["host"],
+            database=st.secrets["postgres"]["database"],
+            user=st.secrets["postgres"]["user"],
+            password=st.secrets["postgres"]["password"],
+            port=st.secrets["postgres"]["port"],
+            sslmode='require'  # IMPORTANTE para Supabase
+        )
+        return conn
+    except Exception as e:
+        print(f'Erro conexão com Supabase: {e}')
+        # Fallback para desenvolvimento local
         try:
-            import streamlit as st
-            pg = st.secrets.get("postgres", None)
-            if pg:
-                host = pg.get("host")
-                database = pg.get("database")
-                user = pg.get("user")
-                password = pg.get("password")
-                port = pg.get("port", 5432)
-            else:
-                raise RuntimeError("st.secrets['postgres'] não configurado")
-        except Exception:
-            # fallback para variáveis de ambiente
-            host = os.getenv("DB_HOST", "localhost")
-            database = os.getenv("DB_NAME", "PNL")
-            user = os.getenv("DB_USER", "ZenNohDev")
-            password = os.getenv("DB_PASS", None)
-            port = int(os.getenv("DB_PORT", 5432))
+            return psycopg2.connect(
+                host='localhost', 
+                database='PNL',
+                user='ZenNohDev', 
+                password='Zgbr@2025'
+            )
+        except Exception as e2:
+            print(f'Erro conexão local: {e2}')
+            return None
 
         # validação mínima
         if not all([host, database, user, password]):
